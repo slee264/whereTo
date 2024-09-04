@@ -28,15 +28,8 @@ export default function App() {
 
     for(let i = 0; i < album_ids.length; i++){
       const album_response = await axios.get(baseURL + "getAlbum?" + "u=" + user + "&p=" + password + "&v=" + version + "&c=" + client + "&id=" + album_ids[i] + "&f=json");
-      // console.log(album_response.data["subsonic-response"]["album"]);
       album_details.push(album_response.data["subsonic-response"]["album"]);
     }
-
-    // album_ids.forEach(async (album_id) => {
-    //   const album_response = await axios.get(baseURL + "getAlbum?" + "u=" + user + "&p=" + password + "&v=" + version + "&c=" + client + "&id=" + album_id + "&f=json");
-    //   album_details.push(album_response.data["subsonic-response"]["album"]);
-    // })
-
     console.log(album_details);
     
   }
