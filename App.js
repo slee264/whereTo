@@ -1,4 +1,6 @@
-import { Button, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
+
+import { Button, Image, Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { StatusBar } from 'expo-status-bar';
@@ -17,16 +19,18 @@ const baseOptions = {
   c: client
 }
 
+SplashScreen.preventAutoHideAsync();
+
 // http://demo.subsonic.org/rest/getAlbumList2?u=guest&p=guest&v=1.12.0&c=12345&type=newest
 
 function ListCard(props) {
   const [modalVisible, setModalVisible] = useState(false);
   const tracksRef = useRef([]);
-  const albumInfoRef = useRef(null);
   const album = props.album;
   const id = album["id"]
   const artist = album["artist"]
   const name = album["name"]
+  const background = props.background
   const songs = album["songs"]
   const requestURL = baseURL + "getCoverArt?" + new URLSearchParams({...baseOptions, id})
   
@@ -53,13 +57,15 @@ function ListCard(props) {
   }, [props]);
 
   return (
-    <View>
-      <TouchableOpacity onPress={() => setModalVisible(true)}>
-        <View style={{flexDirection: 'row', alignItems: 'center'}}>
-          {imageComponent}
+    <View style={styles.container}>
+      <TouchableOpacity onPress={() => setModalVisible(true)} style={{width: '100%'}}>
+        <View style={{...styles.row, backgroundColor: background === 1 ? 'white' : 'grey'}}> 
           <View>
-            <Text>{name}</Text>
-            <Text>{artist}</Text>
+            {imageComponent}
+          </View>
+          <View style={{flex: 1}}>
+            <Text style={{marginLeft: 20, ...styles.titleText}}>{name}</Text>
+            <Text style={{marginLeft: 20}}>{artist}</Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -67,20 +73,17 @@ function ListCard(props) {
         animationType="fade"
         transparent={true}
         visible={modalVisible}
-        onRequestClose={() => {
-          setModalVisible(false);
-        }}
-      >
+        onRequestClose={() => {setModalVisible(false)}}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
           <View style={{width: 300, padding: 20, backgroundColor: 'white', borderRadius: 10, alignItems: 'center' }}>
-            <ScrollView>
+            <ScrollView contentContainerStyle={{alignItems: 'center'}}>
             {imageComponent}
-              <Text style={{ fontSize: 18, marginBottom: 10 }}>{name}</Text>
-              <Text>{artist}</Text>
-              <Text>Genre: {album["genre"]}</Text>
+              <Text style={{ fontSize: 18, marginBottom: 10, ...styles.titleText }}>{name}</Text>
+              <Text style={{marginBottom: 10}}>{artist}</Text>
+              <Text style={{marginBottom: 10}}>Genre: {album["genre"]}</Text>
               <Text>Track List: </Text>
               {tracksRef.current.map((song) => {
-                return (<Text key={song["id"]}>{song["title"]}</Text>)
+                return (<Text key={song["id"]} style={{marginTop: 20}}>{song["title"]}</Text>)
               })}
               <Button title="Close" onPress={() => setModalVisible(false)} />
             </ScrollView>
@@ -88,8 +91,6 @@ function ListCard(props) {
         </View>
       </Modal>
     </View>
-
-    
   )
 
   
@@ -97,12 +98,14 @@ function ListCard(props) {
 
 export default function App() {
   const albumIdsRef = useRef([]);
+  const [appIsReady, setAppIsReady] = useState(false);
 
   useEffect(() => {
-    getData("newest");
-  })
+    fetchData("newest");
+  }, [])
 
-  const getData = async (type) => {
+  const fetchData = async (type) => {
+    setAppIsReady(false);
     const response = await axios.get(baseURL + "getAlbumList2", {
       params: {
         ...baseOptions,
@@ -119,18 +122,23 @@ export default function App() {
         albums.push(album_list[i])
       }
     }
-
     albumIdsRef.current = albums;
+    setAppIsReady(true);
   }
+
+  const onLayoutRootView = useCallback(async () => {
+    if(!appIsReady){
+      await SplashScreen.hideAsync();
+    }
+  }, [appIsReady]);
   
   return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
+    <SafeAreaView style={styles.container}
+      onLayout={onLayoutRootView}>
       <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        {albumIdsRef.current.map((album) => <ListCard key={album["id"]} album={album}></ListCard>)}
+        {albumIdsRef.current.map((album, i) => <ListCard key={album["id"]} background={i%2} album={album}></ListCard>)}
       </ScrollView>
-      <StatusBar style="auto" />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -140,10 +148,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     alignItems: 'stretch',
     justifyContent: 'center',
+    width: '100%'
   },
   scrollViewContent: {
     justifyContent: 'center',
     alignItems: 'center',
     flexGrow: 1,
   },
+  row: {
+    flexDirection: 'row', // Align children horizontally
+    alignItems: 'center', // Center vertically
+    padding: 35, // Add padding if needed
+    width: '100%',
+    margin: 'auto'  
+  },
+  titleText: {
+    fontWeight: 'bold'
+  }
 });
